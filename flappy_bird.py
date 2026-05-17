@@ -10,9 +10,17 @@ pygame.display.set_caption("Flappy Bird")
 CLOCK = pygame.time.Clock()
 FPS = 60
 
-BIRD_X = 50
+BACKGROUND_IMAGE = pygame.transform.scale(
+    pygame.image.load("background.jpg"), (SCREEN_WIDTH, SCREEN_HEIGHT)
+)
+
 BIRD_SIZE = (38, 28)
-bird_y = SCREEN_HEIGHT // 2
+BIRD_IMAGE = pygame.transform.scale(
+    pygame.image.load("bird1.png"), BIRD_SIZE
+)
+
+BIRD_X = 50
+bird_y = SCREEN_HEIGHT // 2      
 bird_y_change = 0
 GRAVITY = 3
 FLAP_STRENGTH = -6
@@ -61,12 +69,12 @@ while running:
         if bird_y < top_height or bird_bottom > bottom_y:
             running = False  
 
-    SCREEN.fill((135, 206, 250)) 
+    SCREEN.blit(BACKGROUND_IMAGE, (0, 0))
     pygame.draw.rect(SCREEN, OBSTACLE_COLOR, (obstacle_x, 0, OBSTACLE_WIDTH, top_height))
     pygame.draw.rect(SCREEN, OBSTACLE_COLOR, (obstacle_x, bottom_y, OBSTACLE_WIDTH, SCREEN_HEIGHT - bottom_y))
-    
-    pygame.draw.rect(SCREEN, (255, 255, 0), (BIRD_X, bird_y, BIRD_SIZE[0], BIRD_SIZE[1]))
+    SCREEN.blit(BIRD_IMAGE, (BIRD_X, bird_y))
 
     pygame.display.update()  
 
 pygame.quit()
+
