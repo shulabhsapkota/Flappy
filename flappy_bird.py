@@ -2,92 +2,123 @@ import pygame
 import random
 
 pygame.init()
-SCREEN_WIDTH = 500
-SCREEN_HEIGHT = 750
+
+SCREEN_WIDTH, SCREEN_HEIGHT = 500, 750
 SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Flappy Bird")
 
-CLOCK = pygame.time.Clock()
-FPS = 60
+CLOCK, FPS = pygame.time.Clock(), 60
 
+BIRD_X, BIRD_SIZE = 50, (38, 28)
+GRAVITY, FLAP_STRENGTH = 3, -6
+OBSTACLE_WIDTH, OBSTACLE_GAP, OBSTACLE_SPEED = 70, 160, -4
 
-BACKGROUND_IMAGE = pygame.transform.scale(
-    pygame.image.load("background.jpg"), (SCREEN_WIDTH, SCREEN_HEIGHT)
+BG = pygame.transform.scale(pygame.image.load("background.jpg"), (SCREEN_WIDTH, SCREEN_HEIGHT))
+BIRD = pygame.transform.scale(pygame.image.load("bird1.png"), BIRD_SIZE)
+
+FONT_L, FONT_M, FONT_S, FONT_SCORE = (
+    pygame.font.Font("freesansbold.ttf", 64),
+    pygame.font.Font("freesansbold.ttf", 32),
+    pygame.font.Font("freesansbold.ttf", 22),
+    pygame.font.Font("freesansbold.ttf", 36),
 )
-BIRD_SIZE = (38, 28)
-BIRD_IMAGE = pygame.transform.scale(
-    pygame.image.load("bird1.png"), BIRD_SIZE
-)
 
 
-BIRD_X = 50
-bird_y = SCREEN_HEIGHT // 2
-bird_y_change = 0
-GRAVITY = 3
-FLAP_STRENGTH = -6
+def center(text, y):
+    return SCREEN_WIDTH // 2 - text.get_width() // 2, y
 
 
-OBSTACLE_WIDTH = 70
-OBSTACLE_GAP = 160
-OBSTACLE_SPEED = -4
-OBSTACLE_MIN_TOP = 120
-OBSTACLE_MAX_TOP = 430
-OBSTACLE_COLOR = (211, 253, 117)
+def start_screen():
+    SCREEN.blit(BG, (0, 0))
 
-obstacle_x = SCREEN_WIDTH
-top_height = random.randint(OBSTACLE_MIN_TOP, OBSTACLE_MAX_TOP)
+    t = FONT_L.render("FLAPPY BIRD", 1, (255, 220, 0))
+    p = FONT_M.render("Press SPACE to Start", 1, (255, 255, 255))
 
-
-score = 0
-high_score = 0
-scored_this_obstacle = False
-FONT_SCORE = pygame.font.Font("freesansbold.ttf", 36)  # Score font
-
-running = True
-while running:
-    CLOCK.tick(FPS)
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            bird_y_change = FLAP_STRENGTH
-        if event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
-            bird_y_change = GRAVITY
-
-
-    bird_y += bird_y_change
-    bird_y = max(0, min(bird_y, SCREEN_HEIGHT - BIRD_SIZE[1]))
-    obstacle_x += OBSTACLE_SPEED
-
-    if obstacle_x + OBSTACLE_WIDTH < BIRD_X and not scored_this_obstacle:
-        score += 1
-        if score > high_score:
-            high_score = score
-        scored_this_obstacle = True
-
-    if obstacle_x < -OBSTACLE_WIDTH:
-        obstacle_x = SCREEN_WIDTH
-        top_height = random.randint(OBSTACLE_MIN_TOP, OBSTACLE_MAX_TOP)
-        scored_this_obstacle = False
-    bottom_y = top_height + OBSTACLE_GAP
-
-    bird_right = BIRD_X + BIRD_SIZE[0]
-    bird_bottom = bird_y + BIRD_SIZE[1]
-    if obstacle_x < bird_right and (obstacle_x + OBSTACLE_WIDTH) > BIRD_X:
-        if bird_y < top_height or bird_bottom > bottom_y:
-            running = False
-
-
-    SCREEN.blit(BACKGROUND_IMAGE, (0, 0))
-    pygame.draw.rect(SCREEN, OBSTACLE_COLOR, (obstacle_x, 0, OBSTACLE_WIDTH, top_height))
-    pygame.draw.rect(SCREEN, OBSTACLE_COLOR, (obstacle_x, bottom_y, OBSTACLE_WIDTH, SCREEN_HEIGHT - bottom_y))
-    SCREEN.blit(BIRD_IMAGE, (BIRD_X, bird_y))
-
-    score_text = FONT_SCORE.render(str(score), True, (255, 255, 255))
-    text_rect = score_text.get_rect(center=(SCREEN_WIDTH//2, 20))
-    SCREEN.blit(score_text, text_rect)
-
+    SCREEN.blit(t, center(t, 200))
+    SCREEN.blit(p, center(p, 310))
     pygame.display.update()
 
+
+def game_over(score):
+    SCREEN.blit(pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA), (0, 0))
+
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 160))
+    SCREEN.blit(overlay, (0, 0))
+
+    g = FONT_L.render("GAME OVER", 1, (220, 40, 40))
+    s = FONT_M.render(f"Score: {score}", 1, (255, 255, 255))
+    r = FONT_S.render("Press SPACE to Play Again", 1, (200, 200, 200))
+
+    SCREEN.blit(g, center(g, 240))
+    SCREEN.blit(s, center(s, 340))
+    SCREEN.blit(r, center(r, 510))
+    pygame.display.update()
+
+
+def wait(start, score):
+    (start_screen() if start else game_over(score))
+    while True:
+        CLOCK.tick(FPS)
+        for e in pygame.event.get():
+            if e.type == pygame.QUIT:
+                pygame.quit(); raise SystemExit
+            if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+                return
+
+
+def main():
+    first, high = True, 0
+
+    while True:
+        wait(first, 0)
+        first = False
+
+        bird_y, bird_v = 300, 0
+        obs_x, top = SCREEN_WIDTH, random.randint(120, 430)
+        score, passed = 0, False
+
+        running = True
+        while running:
+            CLOCK.tick(FPS)
+
+            for e in pygame.event.get():
+                if e.type == pygame.QUIT:
+                    pygame.quit(); raise SystemExit
+                if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE:
+                    bird_v = FLAP_STRENGTH
+                if e.type == pygame.KEYUP and e.key == pygame.K_SPACE:
+                    bird_v = GRAVITY
+
+            bird_y += bird_v
+            obs_x += OBSTACLE_SPEED
+
+            if obs_x + OBSTACLE_WIDTH < BIRD_X and not passed:
+                score += 1
+                passed = True
+
+            if obs_x < -OBSTACLE_WIDTH:
+                obs_x, top, passed = SCREEN_WIDTH, random.randint(120, 430), False
+
+            bottom = top + OBSTACLE_GAP
+
+            bird = pygame.Rect(BIRD_X, bird_y, *BIRD_SIZE)
+            top_r = pygame.Rect(obs_x, 0, OBSTACLE_WIDTH, top)
+            bot_r = pygame.Rect(obs_x, bottom, OBSTACLE_WIDTH, SCREEN_HEIGHT - bottom)
+
+            if bird.colliderect(top_r) or bird.colliderect(bot_r):
+                running = False
+
+            SCREEN.blit(BG, (0, 0))
+            SCREEN.blit(BIRD, (BIRD_X, bird_y))
+            pygame.draw.rect(SCREEN, (211, 253, 117), top_r)
+            pygame.draw.rect(SCREEN, (211, 253, 117), bot_r)
+
+            SCREEN.blit(FONT_SCORE.render(str(score), 1, (255, 255, 255)), (230, 20))
+            pygame.display.update()
+
+        high = max(high, score)
+
+
+main()
 pygame.quit()
